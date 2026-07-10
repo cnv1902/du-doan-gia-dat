@@ -1,0 +1,86 @@
+.navbar-container {
+  display: flex;
+  align-items: center;
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+  padding: 5px 15px;
+  height: 45px;
+  box-sizing: border-box;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  font-size: 13px;
+}
+
+.navbar-section {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.navbar-title {
+  font-weight: bold;
+  color: #495057;
+  margin-right: 5px;
+}
+
+.navbar-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  color: #343a40;
+}
+
+.navbar-divider {
+  width: 1px;
+  height: 30px;
+  background-color: #ced4da;
+  margin: 0 20px;
+}
+
+.navbar-input {
+  padding: 4px 8px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  width: 100px;
+  outline: none;
+  font-size: 13px;
+}
+
+.navbar-input:focus {
+  border-color: #80bdff;
+  box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+}
+
+.navbar-btn {
+  background-color: #0d6efd;
+  color: white;
+  border: none;
+  padding: 5px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 13px;
+  transition: background-color 0.2s;
+}
+
+.navbar-btn:hover {
+  background-color: #0b5ed7;
+}
+
+.navbar-btn-secondary {
+  background-color: #6c757d;
+  margin-right: 8px;
+}
+
+.navbar-btn-secondary:hover {
+  background-color: #5c636a;
+}
+
+.navbar-btn-secondary.active {
+  background-color: #d97706;
+}
+
+.navbar-btn-secondary.active:hover {
+  background-color: #b45309;
+}

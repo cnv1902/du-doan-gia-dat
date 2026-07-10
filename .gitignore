@@ -1,0 +1,8 @@
+node_modules/
+*.graphml
+
+__pycache__/
+*.py[cod]
+
+venv/
+.venv/
