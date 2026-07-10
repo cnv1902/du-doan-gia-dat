@@ -92,6 +92,7 @@ const MapSelectionController = ({ enabled, geoData, setSelectedParcels }) => {
 
   useEffect(() => {
     const container = map.getContainer();
+
     if (enabled) {
       map.dragging.disable();
       map.doubleClickZoom.disable();
@@ -117,39 +118,35 @@ const MapSelectionController = ({ enabled, geoData, setSelectedParcels }) => {
     };
   }, [enabled, map]);
 
-  useMapEvents({
-    mousedown: (event) => {
-      if (!enabled || event.originalEvent.button !== 0) return;
+  useEffect(() => {
+    if (!enabled) return;
 
-      startPointRef.current = map.mouseEventToLatLng(event.originalEvent);
+    const handleMouseDown = (e) => {
+      startPointRef.current = e.latlng;
       draggingRef.current = true;
-    },
-    mousemove: (event) => {
-      if (!enabled || !draggingRef.current || !startPointRef.current) return;
+      if (rectangleRef.current) {
+        map.removeLayer(rectangleRef.current);
+        rectangleRef.current = null;
+      }
+    };
 
-      const currentPoint = map.mouseEventToLatLng(event.originalEvent);
-      const bounds = L.latLngBounds(startPointRef.current, currentPoint);
-
+    const handleMouseMove = (e) => {
+      if (!draggingRef.current || !startPointRef.current) return;
+      const bounds = L.latLngBounds(startPointRef.current, e.latlng);
       if (!rectangleRef.current) {
-        rectangleRef.current = L.rectangle(bounds, {
-          color: '#ff7a00',
-          weight: 2,
-          fillColor: '#ff7a00',
-          fillOpacity: 0.08,
-          dashArray: '6 4'
-        }).addTo(map);
+        rectangleRef.current = L.rectangle(bounds, { color: '#ff7800', weight: 1 }).addTo(map);
       } else {
         rectangleRef.current.setBounds(bounds);
       }
-    },
-    mouseup: (event) => {
-      if (!enabled || !draggingRef.current || !startPointRef.current) return;
+    };
 
-      const endPoint = map.mouseEventToLatLng(event.originalEvent);
-      const bounds = L.latLngBounds(startPointRef.current, endPoint);
-
+    const handleMouseUp = (e) => {
+      if (!draggingRef.current) return;
       draggingRef.current = false;
-      startPointRef.current = null;
+
+      if (!startPointRef.current) return;
+
+      const bounds = L.latLngBounds(startPointRef.current, e.latlng);
 
       if (rectangleRef.current) {
         map.removeLayer(rectangleRef.current);
@@ -160,8 +157,18 @@ const MapSelectionController = ({ enabled, geoData, setSelectedParcels }) => {
 
       const selected = collectVisibleSelections(geoData, bounds);
       setSelectedParcels(selected);
-    }
-  });
+    };
+
+    map.on('mousedown', handleMouseDown);
+    map.on('mousemove', handleMouseMove);
+    map.on('mouseup', handleMouseUp);
+
+    return () => {
+      map.off('mousedown', handleMouseDown);
+      map.off('mousemove', handleMouseMove);
+      map.off('mouseup', handleMouseUp);
+    };
+  }, [enabled, geoData, map, setSelectedParcels]);
 
   return null;
 };
@@ -276,6 +283,12 @@ const MapViewer = ({ activeWards, minPrice, maxPrice, filterTrigger, selectedPar
 
     Object.values(geoData).forEach((wardData) => {
       if (!wardData?.features) return;
+      wardData.features.forEach((feature) => {
+        const featureId = getFeatureId(feature);
+        if (featureId != null) visibleIds.add(featureId);
+      });
+    });
+
     setSelectedParcels(prev => {
       const nextSelected = prev.filter(parcel => visibleIds.has(parcel.id));
       if (nextSelected.length === prev.length) {
@@ -294,12 +307,6 @@ const MapViewer = ({ activeWards, minPrice, maxPrice, filterTrigger, selectedPar
 
       return nextSelected;
     });
-        const featureId = getFeatureId(feature);
-        if (featureId != null) visibleIds.add(featureId);
-      });
-    });
-
-    setSelectedParcels(prev => prev.filter(parcel => visibleIds.has(parcel.id)));
   }, [geoData, setSelectedParcels]);
 
   // Hàm Style chung hỗ trợ trạng thái selected
