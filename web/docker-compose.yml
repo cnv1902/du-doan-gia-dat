@@ -1,0 +1,41 @@
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: land_pricing_mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    container_name: land_pricing_backend
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+      - ./frontend/public/data:/app/frontend/public/data:ro
+    ports:
+      - "3001:3001"
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/land-pricing
+      - DATA_DIR=/app/frontend/public/data
+    depends_on:
+      - mongodb
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: land_pricing_frontend
+    working_dir: /app
+    ports:
+      - "8080:5173"
+    environment:
+      - VITE_API_URL=http://localhost:3001
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:

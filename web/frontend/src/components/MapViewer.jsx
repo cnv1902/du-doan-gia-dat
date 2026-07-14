@@ -119,9 +119,14 @@ const MapSelectionController = ({ enabled, geoData, setSelectedParcels }) => {
   }, [enabled, map]);
 
   useEffect(() => {
-    if (!enabled) return;
-
     const handleMouseDown = (e) => {
+      // Bắt đầu vẽ nếu đang bật selectionMode HOẶC người dùng giữ phím Shift
+      if (!enabled && !e.originalEvent.shiftKey) return;
+
+      if (!enabled && e.originalEvent.shiftKey) {
+        map.dragging.disable(); // Tạm tắt kéo map khi dùng Shift+Drag
+      }
+
       startPointRef.current = e.latlng;
       draggingRef.current = true;
       if (rectangleRef.current) {
@@ -144,6 +149,10 @@ const MapSelectionController = ({ enabled, geoData, setSelectedParcels }) => {
       if (!draggingRef.current) return;
       draggingRef.current = false;
 
+      if (!enabled) {
+        map.dragging.enable(); // Bật lại kéo map sau khi thả chuột
+      }
+
       if (!startPointRef.current) return;
 
       const bounds = L.latLngBounds(startPointRef.current, e.latlng);
@@ -156,7 +165,22 @@ const MapSelectionController = ({ enabled, geoData, setSelectedParcels }) => {
       if (!bounds.isValid()) return;
 
       const selected = collectVisibleSelections(geoData, bounds);
-      setSelectedParcels(selected);
+      
+      // Nếu dùng Shift, ta sẽ cộng dồn các thửa được chọn (hoặc giữ nguyên logic thay thế toàn bộ)
+      // Ở đây ta cộng dồn nếu có shiftKey
+      if (e.originalEvent.shiftKey) {
+        setSelectedParcels(prev => {
+          const newSelections = [...prev];
+          selected.forEach(s => {
+            if (!newSelections.find(p => p.id === s.id)) {
+              newSelections.push(s);
+            }
+          });
+          return newSelections;
+        });
+      } else {
+        setSelectedParcels(selected);
+      }
     };
 
     map.on('mousedown', handleMouseDown);
@@ -177,7 +201,7 @@ const TAY_HIEU_COLOR = '#ff7800';
 const DONG_HIEU_COLOR = '#4287f5';
 const THAI_HOA_COLOR  = '#28b463';
 
-const MapViewer = ({ activeWards, minPrice, maxPrice, filterTrigger, selectedParcels, setSelectedParcels, originalData, setOriginalData, selectionMode }) => {
+const MapViewer = ({ activeWards, minPrice, maxPrice, filterTrigger, selectedParcels, setSelectedParcels, originalData, setOriginalData, selectionMode, refreshTrigger }) => {
   const [geoData, setGeoData] = useState(() => loadCachedFilteredData());
 
   const centerNgheAn = [19.324, 105.419]; // Tọa độ trung tâm TX Thái Hòa
@@ -190,9 +214,11 @@ const MapViewer = ({ activeWards, minPrice, maxPrice, filterTrigger, selectedPar
   useEffect(() => {
     const wardRequests = [];
 
+    const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
     if (activeWards.includes('TAY_HIEU')) {
       wardRequests.push(
-        fetch('/data/TAY_HIEU_processed.json')
+        fetch(`${apiBaseUrl}/api/parcels?ward=TAY_HIEU`)
           .then(res => res.json())
           .then(data => ['tayHieu', data])
       );
@@ -200,7 +226,7 @@ const MapViewer = ({ activeWards, minPrice, maxPrice, filterTrigger, selectedPar
 
     if (activeWards.includes('DONG_HIEU')) {
       wardRequests.push(
-        fetch('/data/DONG_HIEU_processed.json')
+        fetch(`${apiBaseUrl}/api/parcels?ward=DONG_HIEU`)
           .then(res => res.json())
           .then(data => ['dongHieu', data])
       );
@@ -208,7 +234,7 @@ const MapViewer = ({ activeWards, minPrice, maxPrice, filterTrigger, selectedPar
 
     if (activeWards.includes('THAI_HOA')) {
       wardRequests.push(
-        fetch('/data/THAI_HOA_processed.json')
+        fetch(`${apiBaseUrl}/api/parcels?ward=THAI_HOA`)
           .then(res => res.json())
           .then(data => ['thaiHoa', data])
       );
@@ -238,7 +264,7 @@ const MapViewer = ({ activeWards, minPrice, maxPrice, filterTrigger, selectedPar
     return () => {
       cancelled = true;
     };
-  }, [activeWards, setOriginalData]);
+  }, [activeWards, setOriginalData, refreshTrigger]);
 
   useEffect(() => {
     if (!originalData.tayHieu && !originalData.dongHieu && !originalData.thaiHoa) return;
@@ -402,7 +428,8 @@ const MapViewer = ({ activeWards, minPrice, maxPrice, filterTrigger, selectedPar
       center={centerNgheAn} 
       zoom={14} 
       style={{ height: "100%", width: "100%" }}
-      preferCanvas={true} 
+      preferCanvas={true}
+      boxZoom={false}
     >
       <TileLayer
         attribution='&copy; <a href="https://osm.org/copyright">OpenStreetMap</a>'
@@ -417,7 +444,7 @@ const MapViewer = ({ activeWards, minPrice, maxPrice, filterTrigger, selectedPar
 
       {geoData.tayHieu && (
         <GeoJSON 
-          key={`tayHieu-${filterTrigger}-${selectedParcels.length}`}
+          key={`tayHieu-${refreshTrigger}-${filterTrigger}-${selectedParcels.length}`}
           data={geoData.tayHieu} 
           style={(feature) => getStyle(TAY_HIEU_COLOR, feature)}
           onEachFeature={(feature, layer) => onEachFeature('TAY_HIEU', feature, layer)}
@@ -430,7 +457,7 @@ const MapViewer = ({ activeWards, minPrice, maxPrice, filterTrigger, selectedPar
 
       {geoData.dongHieu && (
         <GeoJSON 
-          key={`dongHieu-${filterTrigger}-${selectedParcels.length}`}
+          key={`dongHieu-${refreshTrigger}-${filterTrigger}-${selectedParcels.length}`}
           data={geoData.dongHieu} 
           style={(feature) => getStyle(DONG_HIEU_COLOR, feature)}
           onEachFeature={(feature, layer) => onEachFeature('DONG_HIEU', feature, layer)}
@@ -443,7 +470,7 @@ const MapViewer = ({ activeWards, minPrice, maxPrice, filterTrigger, selectedPar
 
       {geoData.thaiHoa && (
         <GeoJSON 
-          key={`thaiHoa-${filterTrigger}-${selectedParcels.length}`}
+          key={`thaiHoa-${refreshTrigger}-${filterTrigger}-${selectedParcels.length}`}
           data={geoData.thaiHoa} 
           style={(feature) => getStyle(THAI_HOA_COLOR, feature)}
           onEachFeature={(feature, layer) => onEachFeature('THAI_HOA', feature, layer)}
