@@ -212,7 +212,7 @@ const TAY_HIEU_COLOR = '#ff7800';
 const DONG_HIEU_COLOR = '#4287f5';
 const THAI_HOA_COLOR = '#28b463';
 
-const MapViewer = ({ activeWards, minPrice, maxPrice, disablePricedParcels, filterTrigger,  selectedParcels,
+const MapViewer = ({ activeWards, minPrice, maxPrice, disablePricedParcels, filterTrigger, selectedParcels,
   setSelectedParcels,
   originalData,
   setOriginalData,
@@ -473,10 +473,11 @@ const MapViewer = ({ activeWards, minPrice, maxPrice, disablePricedParcels, filt
   };
 
   return (
-    // preferCanvas cự kì quan trọng để tối ưu hóa render hàng nghìn Polygons
-    <MapContainer
-      className={!showHoverDetails ? 'hide-tooltips' : ''}
-      center={centerNgheAn}
+    // Wrap trong div để React có thể update class động (MapContainer không nhận class thay đổi sau khi mount)
+    <div className={!showHoverDetails ? 'hide-tooltips' : ''} style={{ height: "100%", width: "100%" }}>
+      {/* preferCanvas cự kì quan trọng để tối ưu hóa render hàng nghìn Polygons */}
+      <MapContainer
+        center={centerNgheAn}
       zoom={14}
       style={{ height: "100%", width: "100%" }}
       preferCanvas={true}
@@ -532,7 +533,8 @@ const MapViewer = ({ activeWards, minPrice, maxPrice, disablePricedParcels, filt
           }}
         />
       )}
-    </MapContainer>
+      </MapContainer>
+    </div>
   );
 };
 
