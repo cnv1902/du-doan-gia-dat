@@ -30,7 +30,7 @@ services:
     container_name: land_pricing_frontend
     working_dir: /app
     ports:
-      - "8080:5173"
+      - "8080:80"
     environment:
       - VITE_API_URL=
     depends_on:

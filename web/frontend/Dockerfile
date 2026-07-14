@@ -1,7 +1,5 @@
-FROM node:20-alpine
-
-# Cài đặt serve toàn cục
-RUN npm install -g serve
+# Build Stage
+FROM node:20-alpine AS build
 
 # Thiết lập thư mục làm việc
 WORKDIR /app
@@ -18,6 +16,17 @@ COPY . .
 # Build ứng dụng Vite
 RUN npm run build
 
-# Phục vụ thư mục dist ở port 5173
-EXPOSE 5173
-CMD ["serve", "-s", "dist", "-l", "5173"]
+
+# Serve Stage với Nginx
+FROM nginx:alpine
+
+# Copy cấu hình nginx tùy chỉnh vào container
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Copy thư mục build từ Stage 1 sang thư mục phục vụ của Nginx
+COPY --from=build /app/dist /usr/share/nginx/html
+
+# Expose port 80 cho container
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
