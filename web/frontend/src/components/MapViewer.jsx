@@ -142,7 +142,7 @@ const MapSelectionController = ({ enabled, geoData, disablePricedParcels, setSel
       if (!draggingRef.current || !startPointRef.current) return;
       const bounds = L.latLngBounds(startPointRef.current, e.latlng);
       const color = e.originalEvent.altKey ? '#ff0000' : '#ff7800'; // Đỏ nếu là huỷ chọn (Alt)
-      
+
       if (!rectangleRef.current) {
         rectangleRef.current = L.rectangle(bounds, { color, weight: 1 }).addTo(map);
       } else {
@@ -171,7 +171,7 @@ const MapSelectionController = ({ enabled, geoData, disablePricedParcels, setSel
       if (!bounds.isValid()) return;
 
       const selected = collectVisibleSelections(geoData, bounds, disablePricedParcels);
-      
+
       if (e.originalEvent.altKey) {
         // Hủy chọn
         setSelectedParcels(prev => {
@@ -210,7 +210,7 @@ const MapSelectionController = ({ enabled, geoData, disablePricedParcels, setSel
 
 const TAY_HIEU_COLOR = '#ff7800';
 const DONG_HIEU_COLOR = '#4287f5';
-const THAI_HOA_COLOR  = '#28b463';
+const THAI_HOA_COLOR = '#28b463';
 
 const MapViewer = ({ activeWards, minPrice, maxPrice, disablePricedParcels, filterTrigger, selectedParcels, setSelectedParcels, originalData, setOriginalData, selectionMode, refreshTrigger }) => {
   const [geoData, setGeoData] = useState(() => loadCachedFilteredData());
@@ -282,7 +282,7 @@ const MapViewer = ({ activeWards, minPrice, maxPrice, disablePricedParcels, filt
 
     const applyFilters = (geoJsonObj) => {
       if (!geoJsonObj || !geoJsonObj.features) return geoJsonObj;
-      
+
       const filteredFeatures = geoJsonObj.features.filter(f => {
         // 1. Luôn giữ bộ lọc đất Ở (ODT, ONT)
         const landUse = String(f.properties?.KHLOAIDAT || '').toUpperCase();
@@ -291,7 +291,7 @@ const MapViewer = ({ activeWards, minPrice, maxPrice, disablePricedParcels, filt
 
         // 2. Lọc theo gia_bd
         const giaBd = Number(f.properties?.gia_bd) || 0;
-        
+
         if (minPrice !== '' && giaBd < Number(minPrice)) {
           return false;
         }
@@ -359,7 +359,7 @@ const MapViewer = ({ activeWards, minPrice, maxPrice, disablePricedParcels, filt
   // Hàm Style chung hỗ trợ trạng thái selected
   const getStyle = (wardColor, feature) => {
     const id = getFeatureId(feature);
-    
+
     // Nếu disablePricedParcels bật và thửa đã có giá -> tô xám
     const hasPrice = Number(feature.properties?.gia_bd) > 0;
     if (disablePricedParcels && hasPrice) {
@@ -395,35 +395,35 @@ const MapViewer = ({ activeWards, minPrice, maxPrice, disablePricedParcels, filt
 
   const onEachFeature = (wardKey, feature, layer) => {
     // Xây dựng nội dung Tooltip (Modal nổi) hiển thị tất cả các thuộc tính không có thanh cuộn, chia thành 3 cột
-    let tooltipContent = '<div style="font-size: 9px; padding: 3px; line-height: 1.2;">';
-    tooltipContent += '<h4 style="margin: 0 0 3px 0; border-bottom: 1px solid #ccc; padding-bottom: 2px; font-size: 11px;">Chi tiết thửa đất</h4>';
-    tooltipContent += '<ul style="list-style: none; padding: 0; margin: 0; columns: 3; column-gap: 10px;">';
-    if (feature.properties) {
-      Object.entries(feature.properties).forEach(([key, value]) => {
-        if (key === '_layerRef') return;
-        const valStr = (value !== null && value !== undefined) ? String(value) : 'N/A';
-        tooltipContent += `<li style="padding: 1px 0; border-bottom: 1px solid #eee; word-break: break-word; break-inside: avoid;"><strong>${key}:</strong> ${valStr}</li>`;
-      });
-    }
-    tooltipContent += '</ul></div>';
+    // let tooltipContent = '<div style="font-size: 9px; padding: 3px; line-height: 1.2;">';
+    // tooltipContent += '<h4 style="margin: 0 0 3px 0; border-bottom: 1px solid #ccc; padding-bottom: 2px; font-size: 11px;">Chi tiết thửa đất</h4>';
+    // tooltipContent += '<ul style="list-style: none; padding: 0; margin: 0; columns: 3; column-gap: 10px;">';
+    // if (feature.properties) {
+    //   Object.entries(feature.properties).forEach(([key, value]) => {
+    //     if (key === '_layerRef') return;
+    //     const valStr = (value !== null && value !== undefined) ? String(value) : 'N/A';
+    //     tooltipContent += `<li style="padding: 1px 0; border-bottom: 1px solid #eee; word-break: break-word; break-inside: avoid;"><strong>${key}:</strong> ${valStr}</li>`;
+    //   });
+    // }
+    // tooltipContent += '</ul></div>';
 
-    // bindTooltip với sticky: true giúp modal hiển thị liên tục khi di chuyển chuột bên trong polygon
-    layer.bindTooltip(tooltipContent, {
-      sticky: true,
-      direction: 'auto',
-      opacity: 0.95
-    });
+    // // bindTooltip với sticky: true giúp modal hiển thị liên tục khi di chuyển chuột bên trong polygon
+    // layer.bindTooltip(tooltipContent, {
+    //   sticky: true,
+    //   direction: 'auto',
+    //   opacity: 0.95
+    // });
 
     // Sự kiện tương tác để làm nổi bật thửa đất và Click
     layer.on({
       mouseover: (e) => {
         const hasPrice = Number(feature.properties?.gia_bd) > 0;
         if (disablePricedParcels && hasPrice) return; // Vô hiệu hoá hover nếu đã có giá
-        
+
         const lyr = e.target;
         const id = getFeatureId(feature);
         const isSelected = selectedParcels.some(p => p.id === id);
-        
+
         if (!isSelected) {
           lyr.setStyle({
             weight: 3,
@@ -442,13 +442,13 @@ const MapViewer = ({ activeWards, minPrice, maxPrice, disablePricedParcels, filt
         if (!isSelected) {
           // Reset lại style nếu không được select
           if (layer.feature.properties._layerRef && layer.feature.properties._layerRef.resetStyle) {
-             layer.feature.properties._layerRef.resetStyle(e.target);
+            layer.feature.properties._layerRef.resetStyle(e.target);
           }
         }
       },
       click: (e) => {
         if (selectionMode) return;
-        
+
         const hasPrice = Number(feature.properties?.gia_bd) > 0;
         if (disablePricedParcels && hasPrice) return; // Không cho click chọn nếu đã có giá
 
@@ -467,9 +467,9 @@ const MapViewer = ({ activeWards, minPrice, maxPrice, disablePricedParcels, filt
 
   return (
     // preferCanvas cự kì quan trọng để tối ưu hóa render hàng nghìn Polygons
-    <MapContainer 
-      center={centerNgheAn} 
-      zoom={14} 
+    <MapContainer
+      center={centerNgheAn}
+      zoom={14}
       style={{ height: "100%", width: "100%" }}
       preferCanvas={true}
       boxZoom={false}
@@ -487,40 +487,40 @@ const MapViewer = ({ activeWards, minPrice, maxPrice, disablePricedParcels, filt
       />
 
       {geoData.tayHieu && (
-        <GeoJSON 
+        <GeoJSON
           key={`tayHieu-${refreshTrigger}-${filterTrigger}-${selectedParcels.length}-${disablePricedParcels}`}
-          data={geoData.tayHieu} 
+          data={geoData.tayHieu}
           style={(feature) => getStyle(TAY_HIEU_COLOR, feature)}
           onEachFeature={(feature, layer) => onEachFeature('TAY_HIEU', feature, layer)}
-          ref={(ref) => { 
+          ref={(ref) => {
             geojsonRefs.current.tayHieu = ref;
-            if(ref) geoData.tayHieu.features.forEach(f => { if(!f.properties) f.properties = {}; f.properties._layerRef = ref; });
+            if (ref) geoData.tayHieu.features.forEach(f => { if (!f.properties) f.properties = {}; f.properties._layerRef = ref; });
           }}
         />
       )}
 
       {geoData.dongHieu && (
-        <GeoJSON 
+        <GeoJSON
           key={`dongHieu-${refreshTrigger}-${filterTrigger}-${selectedParcels.length}-${disablePricedParcels}`}
-          data={geoData.dongHieu} 
+          data={geoData.dongHieu}
           style={(feature) => getStyle(DONG_HIEU_COLOR, feature)}
           onEachFeature={(feature, layer) => onEachFeature('DONG_HIEU', feature, layer)}
-          ref={(ref) => { 
+          ref={(ref) => {
             geojsonRefs.current.dongHieu = ref;
-            if(ref) geoData.dongHieu.features.forEach(f => { if(!f.properties) f.properties = {}; f.properties._layerRef = ref; });
+            if (ref) geoData.dongHieu.features.forEach(f => { if (!f.properties) f.properties = {}; f.properties._layerRef = ref; });
           }}
         />
       )}
 
       {geoData.thaiHoa && (
-        <GeoJSON 
+        <GeoJSON
           key={`thaiHoa-${refreshTrigger}-${filterTrigger}-${selectedParcels.length}-${disablePricedParcels}`}
-          data={geoData.thaiHoa} 
+          data={geoData.thaiHoa}
           style={(feature) => getStyle(THAI_HOA_COLOR, feature)}
           onEachFeature={(feature, layer) => onEachFeature('THAI_HOA', feature, layer)}
-          ref={(ref) => { 
+          ref={(ref) => {
             geojsonRefs.current.thaiHoa = ref;
-            if(ref) geoData.thaiHoa.features.forEach(f => { if(!f.properties) f.properties = {}; f.properties._layerRef = ref; });
+            if (ref) geoData.thaiHoa.features.forEach(f => { if (!f.properties) f.properties = {}; f.properties._layerRef = ref; });
           }}
         />
       )}
