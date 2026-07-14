@@ -8,8 +8,6 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
-// Phục vụ frontend tĩnh
-app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
 // Mongoose Configuration
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/land-pricing';
@@ -158,10 +156,6 @@ app.post('/api/update-parcels', async (req, res) => {
   }
 });
 
-// Fallback cho React Router
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
-});
 
 const PORT = 3001;
 app.listen(PORT, () => {
