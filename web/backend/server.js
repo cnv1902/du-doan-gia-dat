@@ -3,9 +3,11 @@ const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const mongoose = require('mongoose');
+const compression = require('compression');
 
 const app = express();
 app.use(cors());
+app.use(compression());
 app.use(express.json({ limit: '50mb' }));
 
 
@@ -40,6 +42,12 @@ const WARD_FILES = {
 };
 
 async function checkAndSeedData() {
+  // Prevent PM2 cluster workers from seeding simultaneously (race condition leading to duplicate data)
+  if (process.env.pm_id !== undefined && process.env.pm_id !== '0') {
+    console.log('Worker is not instance 0. Skipping seed check to avoid race conditions.');
+    return;
+  }
+
   try {
     const count = await Parcel.countDocuments();
     if (count > 0) {
