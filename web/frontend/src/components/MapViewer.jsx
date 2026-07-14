@@ -55,7 +55,7 @@ const saveCachedFilteredData = (data) => {
 
 const getFeatureId = (feature) => feature?.properties?.THUAID || feature?.properties?.OBJECTID;
 
-const collectVisibleSelections = (geoData, bounds) => {
+const collectVisibleSelections = (geoData, bounds, disablePricedParcels) => {
   const selections = [];
   const seen = new Set();
 
@@ -70,6 +70,9 @@ const collectVisibleSelections = (geoData, bounds) => {
       if (seen.has(selectionKey)) return;
 
       try {
+        const hasPrice = Number(feature.properties?.gia_bd) > 0;
+        if (disablePricedParcels && hasPrice) return;
+
         const featureBounds = L.geoJSON(feature).getBounds();
         if (featureBounds.isValid() && bounds.intersects(featureBounds)) {
           selections.push({ id: featureId, ward: WARD_LABELS[wardKey] });
@@ -84,7 +87,7 @@ const collectVisibleSelections = (geoData, bounds) => {
   return selections;
 };
 
-const MapSelectionController = ({ enabled, geoData, setSelectedParcels }) => {
+const MapSelectionController = ({ enabled, geoData, disablePricedParcels, setSelectedParcels }) => {
   const map = useMap();
   const startPointRef = useRef(null);
   const rectangleRef = useRef(null);
@@ -120,11 +123,11 @@ const MapSelectionController = ({ enabled, geoData, setSelectedParcels }) => {
 
   useEffect(() => {
     const handleMouseDown = (e) => {
-      // Bắt đầu vẽ nếu đang bật selectionMode HOẶC người dùng giữ phím Shift
-      if (!enabled && !e.originalEvent.shiftKey) return;
+      // Bắt đầu vẽ nếu đang bật selectionMode HOẶC người dùng giữ phím Shift / Alt
+      if (!enabled && !e.originalEvent.shiftKey && !e.originalEvent.altKey) return;
 
-      if (!enabled && e.originalEvent.shiftKey) {
-        map.dragging.disable(); // Tạm tắt kéo map khi dùng Shift+Drag
+      if (!enabled && (e.originalEvent.shiftKey || e.originalEvent.altKey)) {
+        map.dragging.disable(); // Tạm tắt kéo map khi dùng Shift/Alt+Drag
       }
 
       startPointRef.current = e.latlng;
@@ -138,10 +141,13 @@ const MapSelectionController = ({ enabled, geoData, setSelectedParcels }) => {
     const handleMouseMove = (e) => {
       if (!draggingRef.current || !startPointRef.current) return;
       const bounds = L.latLngBounds(startPointRef.current, e.latlng);
+      const color = e.originalEvent.altKey ? '#ff0000' : '#ff7800'; // Đỏ nếu là huỷ chọn (Alt)
+      
       if (!rectangleRef.current) {
-        rectangleRef.current = L.rectangle(bounds, { color: '#ff7800', weight: 1 }).addTo(map);
+        rectangleRef.current = L.rectangle(bounds, { color, weight: 1 }).addTo(map);
       } else {
         rectangleRef.current.setBounds(bounds);
+        rectangleRef.current.setStyle({ color }); // Cập nhật màu nếu đổi phím giữa chừng
       }
     };
 
@@ -164,11 +170,16 @@ const MapSelectionController = ({ enabled, geoData, setSelectedParcels }) => {
 
       if (!bounds.isValid()) return;
 
-      const selected = collectVisibleSelections(geoData, bounds);
+      const selected = collectVisibleSelections(geoData, bounds, disablePricedParcels);
       
-      // Nếu dùng Shift, ta sẽ cộng dồn các thửa được chọn (hoặc giữ nguyên logic thay thế toàn bộ)
-      // Ở đây ta cộng dồn nếu có shiftKey
-      if (e.originalEvent.shiftKey) {
+      if (e.originalEvent.altKey) {
+        // Hủy chọn
+        setSelectedParcels(prev => {
+          const selectedIdsToRemove = new Set(selected.map(s => s.id));
+          return prev.filter(p => !selectedIdsToRemove.has(p.id));
+        });
+      } else if (e.originalEvent.shiftKey) {
+        // Cộng dồn
         setSelectedParcels(prev => {
           const newSelections = [...prev];
           selected.forEach(s => {
@@ -192,7 +203,7 @@ const MapSelectionController = ({ enabled, geoData, setSelectedParcels }) => {
       map.off('mousemove', handleMouseMove);
       map.off('mouseup', handleMouseUp);
     };
-  }, [enabled, geoData, map, setSelectedParcels]);
+  }, [enabled, geoData, disablePricedParcels, map, setSelectedParcels]);
 
   return null;
 };
@@ -201,7 +212,7 @@ const TAY_HIEU_COLOR = '#ff7800';
 const DONG_HIEU_COLOR = '#4287f5';
 const THAI_HOA_COLOR  = '#28b463';
 
-const MapViewer = ({ activeWards, minPrice, maxPrice, filterTrigger, selectedParcels, setSelectedParcels, originalData, setOriginalData, selectionMode, refreshTrigger }) => {
+const MapViewer = ({ activeWards, minPrice, maxPrice, disablePricedParcels, filterTrigger, selectedParcels, setSelectedParcels, originalData, setOriginalData, selectionMode, refreshTrigger }) => {
   const [geoData, setGeoData] = useState(() => loadCachedFilteredData());
 
   const centerNgheAn = [19.324, 105.419]; // Tọa độ trung tâm TX Thái Hòa
@@ -302,21 +313,31 @@ const MapViewer = ({ activeWards, minPrice, maxPrice, filterTrigger, selectedPar
 
     setGeoData(nextGeoData);
     saveCachedFilteredData(nextGeoData);
-  }, [originalData, minPrice, maxPrice, filterTrigger, activeWards]);
+  }, [originalData, minPrice, maxPrice, disablePricedParcels, filterTrigger, activeWards]);
 
   useEffect(() => {
     const visibleIds = new Set();
+    const pricedIds = new Set();
 
     Object.values(geoData).forEach((wardData) => {
       if (!wardData?.features) return;
       wardData.features.forEach((feature) => {
         const featureId = getFeatureId(feature);
-        if (featureId != null) visibleIds.add(featureId);
+        if (featureId != null) {
+          visibleIds.add(featureId);
+          if (Number(feature.properties?.gia_bd) > 0) {
+            pricedIds.add(featureId);
+          }
+        }
       });
     });
 
     setSelectedParcels(prev => {
-      const nextSelected = prev.filter(parcel => visibleIds.has(parcel.id));
+      const nextSelected = prev.filter(parcel => {
+        if (!visibleIds.has(parcel.id)) return false;
+        if (disablePricedParcels && pricedIds.has(parcel.id)) return false;
+        return true;
+      });
       if (nextSelected.length === prev.length) {
         let hasDifference = false;
         for (let index = 0; index < prev.length; index += 1) {
@@ -333,11 +354,24 @@ const MapViewer = ({ activeWards, minPrice, maxPrice, filterTrigger, selectedPar
 
       return nextSelected;
     });
-  }, [geoData, setSelectedParcels]);
+  }, [geoData, disablePricedParcels, setSelectedParcels]);
 
   // Hàm Style chung hỗ trợ trạng thái selected
   const getStyle = (wardColor, feature) => {
     const id = getFeatureId(feature);
+    
+    // Nếu disablePricedParcels bật và thửa đã có giá -> tô xám
+    const hasPrice = Number(feature.properties?.gia_bd) > 0;
+    if (disablePricedParcels && hasPrice) {
+      return {
+        color: '#999999',
+        weight: 1,
+        opacity: 0.8,
+        fillColor: '#999999',
+        fillOpacity: 0.3
+      };
+    }
+
     const isSelected = selectedParcels.some(p => p.id === id);
 
     if (isSelected) {
@@ -383,6 +417,9 @@ const MapViewer = ({ activeWards, minPrice, maxPrice, filterTrigger, selectedPar
     // Sự kiện tương tác để làm nổi bật thửa đất và Click
     layer.on({
       mouseover: (e) => {
+        const hasPrice = Number(feature.properties?.gia_bd) > 0;
+        if (disablePricedParcels && hasPrice) return; // Vô hiệu hoá hover nếu đã có giá
+        
         const lyr = e.target;
         const id = getFeatureId(feature);
         const isSelected = selectedParcels.some(p => p.id === id);
@@ -397,6 +434,9 @@ const MapViewer = ({ activeWards, minPrice, maxPrice, filterTrigger, selectedPar
         }
       },
       mouseout: (e) => {
+        const hasPrice = Number(feature.properties?.gia_bd) > 0;
+        if (disablePricedParcels && hasPrice) return; // Vô hiệu hoá hover nếu đã có giá
+
         const id = getFeatureId(feature);
         const isSelected = selectedParcels.some(p => p.id === id);
         if (!isSelected) {
@@ -408,6 +448,9 @@ const MapViewer = ({ activeWards, minPrice, maxPrice, filterTrigger, selectedPar
       },
       click: (e) => {
         if (selectionMode) return;
+        
+        const hasPrice = Number(feature.properties?.gia_bd) > 0;
+        if (disablePricedParcels && hasPrice) return; // Không cho click chọn nếu đã có giá
 
         const id = feature.properties?.THUAID || feature.properties?.OBJECTID;
         setSelectedParcels(prev => {
@@ -439,12 +482,13 @@ const MapViewer = ({ activeWards, minPrice, maxPrice, filterTrigger, selectedPar
       <MapSelectionController
         enabled={selectionMode}
         geoData={geoData}
+        disablePricedParcels={disablePricedParcels}
         setSelectedParcels={setSelectedParcels}
       />
 
       {geoData.tayHieu && (
         <GeoJSON 
-          key={`tayHieu-${refreshTrigger}-${filterTrigger}-${selectedParcels.length}`}
+          key={`tayHieu-${refreshTrigger}-${filterTrigger}-${selectedParcels.length}-${disablePricedParcels}`}
           data={geoData.tayHieu} 
           style={(feature) => getStyle(TAY_HIEU_COLOR, feature)}
           onEachFeature={(feature, layer) => onEachFeature('TAY_HIEU', feature, layer)}
@@ -457,7 +501,7 @@ const MapViewer = ({ activeWards, minPrice, maxPrice, filterTrigger, selectedPar
 
       {geoData.dongHieu && (
         <GeoJSON 
-          key={`dongHieu-${refreshTrigger}-${filterTrigger}-${selectedParcels.length}`}
+          key={`dongHieu-${refreshTrigger}-${filterTrigger}-${selectedParcels.length}-${disablePricedParcels}`}
           data={geoData.dongHieu} 
           style={(feature) => getStyle(DONG_HIEU_COLOR, feature)}
           onEachFeature={(feature, layer) => onEachFeature('DONG_HIEU', feature, layer)}
@@ -470,7 +514,7 @@ const MapViewer = ({ activeWards, minPrice, maxPrice, filterTrigger, selectedPar
 
       {geoData.thaiHoa && (
         <GeoJSON 
-          key={`thaiHoa-${refreshTrigger}-${filterTrigger}-${selectedParcels.length}`}
+          key={`thaiHoa-${refreshTrigger}-${filterTrigger}-${selectedParcels.length}-${disablePricedParcels}`}
           data={geoData.thaiHoa} 
           style={(feature) => getStyle(THAI_HOA_COLOR, feature)}
           onEachFeature={(feature, layer) => onEachFeature('THAI_HOA', feature, layer)}

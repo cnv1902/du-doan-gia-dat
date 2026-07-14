@@ -9,7 +9,8 @@ const FILTER_CACHE_KEY = 'parcel-filter-state-v1';
 const DEFAULT_FILTER_STATE = {
   activeWards: ['TAY_HIEU', 'DONG_HIEU', 'THAI_HOA'],
   minPrice: '',
-  maxPrice: ''
+  maxPrice: '',
+  disablePricedParcels: false
 };
 
 const loadCachedFilterState = () => {
@@ -27,7 +28,8 @@ const loadCachedFilterState = () => {
         ? parsed.activeWards
         : DEFAULT_FILTER_STATE.activeWards,
       minPrice: parsed.minPrice ?? '',
-      maxPrice: parsed.maxPrice ?? ''
+      maxPrice: parsed.maxPrice ?? '',
+      disablePricedParcels: parsed.disablePricedParcels ?? false
     };
   } catch {
     return DEFAULT_FILTER_STATE;
@@ -40,6 +42,7 @@ function App() {
   const [activeWards, setActiveWards] = useState(cachedFilterState.activeWards);
   const [minPrice, setMinPrice] = useState(cachedFilterState.minPrice);
   const [maxPrice, setMaxPrice] = useState(cachedFilterState.maxPrice);
+  const [disablePricedParcels, setDisablePricedParcels] = useState(cachedFilterState.disablePricedParcels);
   
   // State trigger để chỉ áp dụng bộ lọc khi bấm nút
   const [filterTrigger, setFilterTrigger] = useState(0);
@@ -63,7 +66,8 @@ function App() {
       window.localStorage.setItem(FILTER_CACHE_KEY, JSON.stringify({
         activeWards,
         minPrice,
-        maxPrice
+        maxPrice,
+        disablePricedParcels
       }));
     }
 
@@ -112,9 +116,10 @@ function App() {
         activeWards={activeWards} setActiveWards={setActiveWards}
         minPrice={minPrice} setMinPrice={setMinPrice}
         maxPrice={maxPrice} setMaxPrice={setMaxPrice}
+        disablePricedParcels={disablePricedParcels} setDisablePricedParcels={setDisablePricedParcels}
         onApplyFilter={handleApplyFilter}
-          selectionMode={selectionMode}
-          setSelectionMode={setSelectionMode}
+        selectionMode={selectionMode}
+        setSelectionMode={setSelectionMode}
       />
       <div className="main-content">
         <div className="map-section">
@@ -122,6 +127,7 @@ function App() {
             activeWards={activeWards} 
             minPrice={minPrice} 
             maxPrice={maxPrice} 
+            disablePricedParcels={disablePricedParcels}
             filterTrigger={filterTrigger}
             selectedParcels={selectedParcels}
             setSelectedParcels={setSelectedParcels}

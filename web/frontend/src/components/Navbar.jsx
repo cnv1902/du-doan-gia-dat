@@ -1,7 +1,7 @@
 import React from 'react';
 import './Navbar.css';
 
-const Navbar = ({ activeWards, setActiveWards, minPrice, setMinPrice, maxPrice, setMaxPrice, onApplyFilter, selectionMode, setSelectionMode }) => {
+const Navbar = ({ activeWards, setActiveWards, minPrice, setMinPrice, maxPrice, setMaxPrice, disablePricedParcels, setDisablePricedParcels, onApplyFilter, selectionMode, setSelectionMode }) => {
   const handleWardChange = (e) => {
     const { value, checked } = e.target;
     if (checked) {
@@ -45,6 +45,14 @@ const Navbar = ({ activeWards, setActiveWards, minPrice, setMinPrice, maxPrice, 
           onChange={(e) => setMaxPrice(e.target.value)} 
           className="navbar-input"
         />
+        <label className="navbar-checkbox" style={{ marginLeft: '12px' }}>
+          <input 
+            type="checkbox" 
+            checked={disablePricedParcels} 
+            onChange={(e) => setDisablePricedParcels(e.target.checked)} 
+          /> 
+          Đã có giá
+        </label>
       </div>
 
       <div className="navbar-section" style={{ marginLeft: 'auto' }}>
