@@ -158,6 +158,11 @@ app.post('/api/update-parcels', async (req, res) => {
   }
 });
 
+// Fallback cho React Router
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
+});
+
 const PORT = 3001;
 app.listen(PORT, () => {
   console.log(`Backend server running on http://localhost:${PORT}`);
