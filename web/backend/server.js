@@ -85,24 +85,37 @@ async function checkAndSeedData() {
 }
 
 // GET /api/parcels - Fetch all parcels for a specific ward
-app.get('/api/parcels', async (req, res) => {
+app.get('/api/parcels', (req, res) => {
   const { ward } = req.query;
   if (!ward) {
     return res.status(400).json({ error: 'ward query parameter is required' });
   }
 
-  try {
-    // We only need type, properties and geometry
-    const parcels = await Parcel.find({ ward }, { _id: 0, type: 1, properties: 1, geometry: 1 }).lean();
-    
-    res.json({
-      type: "FeatureCollection",
-      features: parcels
-    });
-  } catch (error) {
+  res.setHeader('Content-Type', 'application/json');
+  res.write('{"type":"FeatureCollection","features":[');
+
+  const cursor = Parcel.find({ ward }, { _id: 0, type: 1, properties: 1, geometry: 1 }).lean().cursor();
+  let first = true;
+
+  cursor.on('data', (doc) => {
+    if (!first) res.write(',');
+    first = false;
+    res.write(JSON.stringify(doc));
+  });
+
+  cursor.on('end', () => {
+    res.write(']}');
+    res.end();
+  });
+
+  cursor.on('error', (error) => {
     console.error("Error fetching parcels:", error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Internal server error' });
+    } else {
+      res.end();
+    }
+  });
 });
 
 // POST /api/update-parcels - Update properties of multiple parcels
