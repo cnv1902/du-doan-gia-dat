@@ -225,7 +225,7 @@ const MapViewer = ({ activeWards, minPrice, maxPrice, disablePricedParcels, filt
   useEffect(() => {
     const wardRequests = [];
 
-    const apiBaseUrl = '';
+    const apiBaseUrl = `http://${window.location.hostname}:3001`;
 
     if (activeWards.includes('TAY_HIEU')) {
       wardRequests.push(
