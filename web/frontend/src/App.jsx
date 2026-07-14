@@ -77,7 +77,7 @@ function App() {
   const handleApplyEdits = async (updates) => {
     if (selectedParcels.length === 0) return;
 
-    const apiBaseUrl = `http://${window.location.hostname}:3001`;
+    const apiBaseUrl = '';
 
     const payload = {
       updates: {

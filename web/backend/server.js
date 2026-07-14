@@ -8,6 +8,9 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
+// Phục vụ frontend tĩnh
+app.use(express.static(path.join(__dirname, '../frontend/dist')));
+
 // Mongoose Configuration
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/land-pricing';
 
