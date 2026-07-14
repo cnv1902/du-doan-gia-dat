@@ -19,7 +19,6 @@ services:
       - MONGO_URI=mongodb://mongodb:27017/land-pricing
       - DATA_DIR=/app/frontend/public/data
     volumes:
-      - ./backend:/app
       - ./frontend/public/data:/app/frontend/public/data:ro
     depends_on:
       - mongodb
