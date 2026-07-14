@@ -29,3 +29,8 @@ html, body {
   display: flex;
   flex-direction: column;
 }
+
+/* Ẩn tooltip khi showHoverDetails = false */
+.hide-tooltips .leaflet-tooltip {
+  display: none !important;
+}

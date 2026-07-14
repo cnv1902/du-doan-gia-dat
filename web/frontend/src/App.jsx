@@ -48,6 +48,9 @@ function App() {
   const [filterTrigger, setFilterTrigger] = useState(0);
 
   const [selectionMode, setSelectionMode] = useState(false);
+  
+  // State bật tắt hiển thị tooltip khi hover
+  const [showHoverDetails, setShowHoverDetails] = useState(false);
 
   // Danh sách các thửa được chọn
   const [selectedParcels, setSelectedParcels] = useState([]);
@@ -120,6 +123,8 @@ function App() {
         onApplyFilter={handleApplyFilter}
         selectionMode={selectionMode}
         setSelectionMode={setSelectionMode}
+        showHoverDetails={showHoverDetails}
+        setShowHoverDetails={setShowHoverDetails}
       />
       <div className="main-content">
         <div className="map-section">
@@ -135,6 +140,7 @@ function App() {
             setOriginalData={setOriginalData}
             selectionMode={selectionMode}
             refreshTrigger={refreshTrigger}
+            showHoverDetails={showHoverDetails}
           />
         </div>
         {selectedParcels.length > 0 && (

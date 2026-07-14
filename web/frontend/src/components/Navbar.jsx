@@ -1,7 +1,7 @@
 import React from 'react';
 import './Navbar.css';
 
-const Navbar = ({ activeWards, setActiveWards, minPrice, setMinPrice, maxPrice, setMaxPrice, disablePricedParcels, setDisablePricedParcels, onApplyFilter, selectionMode, setSelectionMode }) => {
+const Navbar = ({ activeWards, setActiveWards, minPrice, setMinPrice, maxPrice, setMaxPrice, disablePricedParcels, setDisablePricedParcels, onApplyFilter, selectionMode, setSelectionMode, showHoverDetails, setShowHoverDetails }) => {
   const handleWardChange = (e) => {
     const { value, checked } = e.target;
     if (checked) {
@@ -61,6 +61,13 @@ const Navbar = ({ activeWards, setActiveWards, minPrice, setMinPrice, maxPrice, 
           onClick={() => setSelectionMode(prev => !prev)}
         >
           {selectionMode ? 'Thoát chọn vùng' : 'Chọn vùng'}
+        </button>
+        <button
+          className={`navbar-btn navbar-btn-secondary ${showHoverDetails ? 'active' : ''}`}
+          style={{ marginRight: '8px' }}
+          onClick={() => setShowHoverDetails(prev => !prev)}
+        >
+          {showHoverDetails ? 'Tắt chi tiết' : 'Bật chi tiết'}
         </button>
         <button className="navbar-btn" onClick={onApplyFilter}>Áp dụng lọc</button>
       </div>

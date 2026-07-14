@@ -212,7 +212,14 @@ const TAY_HIEU_COLOR = '#ff7800';
 const DONG_HIEU_COLOR = '#4287f5';
 const THAI_HOA_COLOR = '#28b463';
 
-const MapViewer = ({ activeWards, minPrice, maxPrice, disablePricedParcels, filterTrigger, selectedParcels, setSelectedParcels, originalData, setOriginalData, selectionMode, refreshTrigger }) => {
+const MapViewer = ({ activeWards, minPrice, maxPrice, disablePricedParcels, filterTrigger,  selectedParcels,
+  setSelectedParcels,
+  originalData,
+  setOriginalData,
+  selectionMode,
+  refreshTrigger,
+  showHoverDetails
+}) => {
   const [geoData, setGeoData] = useState(() => loadCachedFilteredData());
 
   const centerNgheAn = [19.324, 105.419]; // Tọa độ trung tâm TX Thái Hòa
@@ -395,24 +402,24 @@ const MapViewer = ({ activeWards, minPrice, maxPrice, disablePricedParcels, filt
 
   const onEachFeature = (wardKey, feature, layer) => {
     // Xây dựng nội dung Tooltip (Modal nổi) hiển thị tất cả các thuộc tính không có thanh cuộn, chia thành 3 cột
-    // let tooltipContent = '<div style="font-size: 9px; padding: 3px; line-height: 1.2;">';
-    // tooltipContent += '<h4 style="margin: 0 0 3px 0; border-bottom: 1px solid #ccc; padding-bottom: 2px; font-size: 11px;">Chi tiết thửa đất</h4>';
-    // tooltipContent += '<ul style="list-style: none; padding: 0; margin: 0; columns: 3; column-gap: 10px;">';
-    // if (feature.properties) {
-    //   Object.entries(feature.properties).forEach(([key, value]) => {
-    //     if (key === '_layerRef') return;
-    //     const valStr = (value !== null && value !== undefined) ? String(value) : 'N/A';
-    //     tooltipContent += `<li style="padding: 1px 0; border-bottom: 1px solid #eee; word-break: break-word; break-inside: avoid;"><strong>${key}:</strong> ${valStr}</li>`;
-    //   });
-    // }
-    // tooltipContent += '</ul></div>';
+    let tooltipContent = '<div style="font-size: 9px; padding: 3px; line-height: 1.2;">';
+    tooltipContent += '<h4 style="margin: 0 0 3px 0; border-bottom: 1px solid #ccc; padding-bottom: 2px; font-size: 11px;">Chi tiết thửa đất</h4>';
+    tooltipContent += '<ul style="list-style: none; padding: 0; margin: 0; columns: 3; column-gap: 10px;">';
+    if (feature.properties) {
+      Object.entries(feature.properties).forEach(([key, value]) => {
+        if (key === '_layerRef') return;
+        const valStr = (value !== null && value !== undefined) ? String(value) : 'N/A';
+        tooltipContent += `<li style="padding: 1px 0; border-bottom: 1px solid #eee; word-break: break-word; break-inside: avoid;"><strong>${key}:</strong> ${valStr}</li>`;
+      });
+    }
+    tooltipContent += '</ul></div>';
 
-    // // bindTooltip với sticky: true giúp modal hiển thị liên tục khi di chuyển chuột bên trong polygon
-    // layer.bindTooltip(tooltipContent, {
-    //   sticky: true,
-    //   direction: 'auto',
-    //   opacity: 0.95
-    // });
+    // bindTooltip với sticky: true giúp modal hiển thị liên tục khi di chuyển chuột bên trong polygon
+    layer.bindTooltip(tooltipContent, {
+      sticky: true,
+      direction: 'auto',
+      opacity: 0.95
+    });
 
     // Sự kiện tương tác để làm nổi bật thửa đất và Click
     layer.on({
@@ -468,6 +475,7 @@ const MapViewer = ({ activeWards, minPrice, maxPrice, disablePricedParcels, filt
   return (
     // preferCanvas cự kì quan trọng để tối ưu hóa render hàng nghìn Polygons
     <MapContainer
+      className={!showHoverDetails ? 'hide-tooltips' : ''}
       center={centerNgheAn}
       zoom={14}
       style={{ height: "100%", width: "100%" }}
