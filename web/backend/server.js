@@ -182,9 +182,23 @@ app.post('/api/update-parcels', async (req, res) => {
 // GET /api/export-excel - Xuất toàn bộ dữ liệu ra Excel
 app.get('/api/export-excel', async (req, res) => {
   try {
-    const firstDoc = await Parcel.findOne({}, { properties: 1, ward: 1, _id: 0 }).lean();
-    if (!firstDoc) {
-      return res.status(404).send('Không có dữ liệu');
+    // Tìm TẤT CẢ các khóa (cột) tồn tại trong properties của toàn bộ dữ liệu
+    const keysAggr = await Parcel.aggregate([
+      { $match: { properties: { $exists: true, $type: 'object' } } },
+      { $project: { keys: { $objectToArray: "$properties" } } },
+      { $unwind: "$keys" },
+      { $group: { _id: "$keys.k" } }
+    ]);
+    
+    let propKeys = keysAggr.map(k => k._id).filter(k => k !== '_layerRef');
+
+    // Đảm bảo luôn có cột gia_bd
+    if (!propKeys.includes('gia_bd')) {
+      propKeys.push('gia_bd');
+    }
+    
+    if (propKeys.length === 0) {
+      return res.status(404).send('Không có dữ liệu thuộc tính');
     }
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -193,11 +207,6 @@ app.get('/api/export-excel', async (req, res) => {
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({ stream: res });
     const worksheet = workbook.addWorksheet('GiaDat');
 
-    // Tạo headers
-    let propKeys = [];
-    if (firstDoc.properties) {
-      propKeys = Object.keys(firstDoc.properties).filter(k => k !== '_layerRef');
-    }
     const headers = ['Phường_Xã', ...propKeys];
     
     worksheet.columns = headers.map(h => ({ header: h, key: h }));
