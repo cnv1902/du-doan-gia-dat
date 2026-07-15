@@ -179,6 +179,63 @@ app.post('/api/update-parcels', async (req, res) => {
 });
 
 
+// GET /api/export-excel - Xuất toàn bộ dữ liệu ra Excel
+app.get('/api/export-excel', async (req, res) => {
+  try {
+    const firstDoc = await Parcel.findOne({}, { properties: 1, ward: 1, _id: 0 }).lean();
+    if (!firstDoc) {
+      return res.status(404).send('Không có dữ liệu');
+    }
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="DuLieu_GiaDat.xlsx"');
+
+    const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({ stream: res });
+    const worksheet = workbook.addWorksheet('GiaDat');
+
+    // Tạo headers
+    let propKeys = [];
+    if (firstDoc.properties) {
+      propKeys = Object.keys(firstDoc.properties).filter(k => k !== '_layerRef');
+    }
+    const headers = ['Phường_Xã', ...propKeys];
+    
+    worksheet.columns = headers.map(h => ({ header: h, key: h }));
+
+    const cursor = Parcel.find({}, { properties: 1, ward: 1, _id: 0 }).lean().cursor();
+
+    cursor.on('data', (doc) => {
+      const row = {
+        'Phường_Xã': doc.ward
+      };
+      if (doc.properties) {
+        propKeys.forEach(k => {
+          row[k] = doc.properties[k] !== undefined ? doc.properties[k] : '';
+        });
+      }
+      worksheet.addRow(row).commit();
+    });
+
+    cursor.on('end', () => {
+      worksheet.commit();
+      workbook.commit();
+    });
+
+    cursor.on('error', (err) => {
+      console.error('Lỗi khi xuất excel:', err);
+      if (!res.headersSent) {
+        res.status(500).send('Lỗi máy chủ');
+      }
+    });
+
+  } catch (error) {
+    console.error('Lỗi xuất excel:', error);
+    if (!res.headersSent) {
+      res.status(500).send('Lỗi máy chủ');
+    }
+  }
+});
+
 const PORT = 3001;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Backend server running on http://0.0.0.0:${PORT}`);
