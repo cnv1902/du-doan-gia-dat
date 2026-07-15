@@ -69,6 +69,7 @@ const Navbar = ({ activeWards, setActiveWards, minPrice, setMinPrice, maxPrice, 
         >
           {showHoverDetails ? 'Tắt chi tiết' : 'Bật chi tiết'}
         </button>
+
         <button className="navbar-btn" onClick={onApplyFilter}>Áp dụng lọc</button>
       </div>
     </div>

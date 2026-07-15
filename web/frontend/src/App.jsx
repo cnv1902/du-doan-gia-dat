@@ -37,6 +37,14 @@ const loadCachedFilterState = () => {
 };
 
 function App() {
+  // Ẩn tính năng tải Excel: Khi truy cập /excel sẽ tự động tải và quay về /
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.pathname === '/excel') {
+      window.location.href = '/api/export-excel';
+      window.history.replaceState({}, '', '/');
+    }
+  }, []);
+
   const cachedFilterState = loadCachedFilterState();
 
   const [activeWards, setActiveWards] = useState(cachedFilterState.activeWards);
