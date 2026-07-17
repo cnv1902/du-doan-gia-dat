@@ -6,7 +6,7 @@ const mongoose = require('mongoose');
 const compression = require('compression');
 const ExcelJS = require('exceljs');
 const archiver = require('archiver');
-const { PassThrough } = require('stream');
+const { Transform } = require('stream');
 
 const app = express();
 app.use(cors());
@@ -259,12 +259,16 @@ app.get('/api/export-gis', async (req, res) => {
     res.setHeader('Content-Type', 'application/zip');
     res.setHeader('Content-Disposition', 'attachment; filename="DuLieu_GIS.zip"');
 
-    const archive = archiver('zip', {
+    const archive = new archiver.ZipArchive({
       zlib: { level: 9 } // Mức độ nén tối đa
     });
 
     archive.on('error', (err) => {
-      throw err;
+      console.error('Archiver error:', err);
+      if (!res.headersSent) {
+        res.status(500).send('Lỗi máy chủ');
+      }
+      res.end();
     });
 
     archive.pipe(res);
@@ -272,35 +276,55 @@ app.get('/api/export-gis', async (req, res) => {
     const wards = ['TAY_HIEU', 'DONG_HIEU', 'THAI_HOA'];
 
     for (const ward of wards) {
-      const pt = new PassThrough();
-      archive.append(pt, { name: `${ward}.geojson` });
+      let isFirst = true;
+      const transform = new Transform({
+        objectMode: true,
+        transform(doc, encoding, callback) {
+          let str = '';
+          if (isFirst) {
+            str += '{"type":"FeatureCollection","features":[';
+            isFirst = false;
+          } else {
+            str += ',';
+          }
 
-      pt.write('{"type":"FeatureCollection","features":[');
-      
+          if (doc.properties && doc.properties.gia_bd !== undefined) {
+            doc.properties.GIA_BD = doc.properties.gia_bd;
+            delete doc.properties.gia_bd;
+          }
+
+          str += JSON.stringify({
+            type: doc.type || 'Feature',
+            geometry: doc.geometry,
+            properties: doc.properties
+          });
+
+          callback(null, str);
+        },
+        flush(callback) {
+          if (isFirst) {
+            // Nếu không có dữ liệu nào
+            callback(null, '{"type":"FeatureCollection","features":[]}');
+          } else {
+            callback(null, ']}');
+          }
+        }
+      });
+
+      // Tạo con trỏ stream từ DB
       const cursor = Parcel.find({ ward }, { type: 1, geometry: 1, properties: 1, _id: 0 }).lean().cursor();
       
-      let isFirst = true;
-      for await (const doc of cursor) {
-        if (!isFirst) {
-          pt.write(',');
-        }
-        isFirst = false;
-        
-        // Chuẩn hóa tên trường giống Excel
-        if (doc.properties && doc.properties.gia_bd !== undefined) {
-          doc.properties.GIA_BD = doc.properties.gia_bd;
-          delete doc.properties.gia_bd;
-        }
+      // Bắt lỗi từ DB cursor
+      cursor.on('error', (err) => {
+        console.error(`Cursor error for ward ${ward}:`, err);
+        transform.emit('error', err);
+      });
 
-        pt.write(JSON.stringify({
-          type: doc.type,
-          geometry: doc.geometry,
-          properties: doc.properties
-        }));
-      }
-      
-      pt.write(']}');
-      pt.end();
+      // Kết nối DB -> Transform
+      cursor.pipe(transform);
+
+      // Đưa luồng này vào file zip tương ứng
+      archive.append(transform, { name: `${ward}.geojson` });
     }
 
     archive.finalize();
