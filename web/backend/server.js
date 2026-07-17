@@ -5,6 +5,8 @@ const path = require('path');
 const mongoose = require('mongoose');
 const compression = require('compression');
 const ExcelJS = require('exceljs');
+const archiver = require('archiver');
+const { PassThrough } = require('stream');
 
 const app = express();
 app.use(cors());
@@ -207,19 +209,25 @@ app.get('/api/export-excel', async (req, res) => {
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({ stream: res });
     const worksheet = workbook.addWorksheet('GiaDat');
 
-    const headers = ['Phường_Xã', ...propKeys];
+    const headers = ['PHUONG_XA', ...propKeys.map(k => k === 'gia_bd' ? 'GIA_BD' : k)];
     
     worksheet.columns = headers.map(h => ({ header: h, key: h }));
 
     const cursor = Parcel.find({}, { properties: 1, ward: 1, _id: 0 }).lean().cursor();
 
     cursor.on('data', (doc) => {
+      let wardValue = doc.ward;
+      if (wardValue === 'TAY_HIEU') wardValue = 'is_TayHieu';
+      if (wardValue === 'DONG_HIEU') wardValue = 'isDongHieu';
+      if (wardValue === 'THAI_HOA') wardValue = 'isThaiHoa';
+
       const row = {
-        'Phường_Xã': doc.ward
+        'PHUONG_XA': wardValue
       };
       if (doc.properties) {
         propKeys.forEach(k => {
-          row[k] = doc.properties[k] !== undefined ? doc.properties[k] : '';
+          const colKey = k === 'gia_bd' ? 'GIA_BD' : k;
+          row[colKey] = doc.properties[k] !== undefined ? doc.properties[k] : '';
         });
       }
       worksheet.addRow(row).commit();
@@ -239,6 +247,65 @@ app.get('/api/export-excel', async (req, res) => {
 
   } catch (error) {
     console.error('Lỗi xuất excel:', error);
+    if (!res.headersSent) {
+      res.status(500).send('Lỗi máy chủ');
+    }
+  }
+});
+
+// GET /api/export-gis - Xuất toàn bộ dữ liệu ra 3 file GeoJSON (nén trong 1 file ZIP)
+app.get('/api/export-gis', async (req, res) => {
+  try {
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', 'attachment; filename="DuLieu_GIS.zip"');
+
+    const archive = archiver('zip', {
+      zlib: { level: 9 } // Mức độ nén tối đa
+    });
+
+    archive.on('error', (err) => {
+      throw err;
+    });
+
+    archive.pipe(res);
+
+    const wards = ['TAY_HIEU', 'DONG_HIEU', 'THAI_HOA'];
+
+    for (const ward of wards) {
+      const pt = new PassThrough();
+      archive.append(pt, { name: `${ward}.geojson` });
+
+      pt.write('{"type":"FeatureCollection","features":[');
+      
+      const cursor = Parcel.find({ ward }, { type: 1, geometry: 1, properties: 1, _id: 0 }).lean().cursor();
+      
+      let isFirst = true;
+      for await (const doc of cursor) {
+        if (!isFirst) {
+          pt.write(',');
+        }
+        isFirst = false;
+        
+        // Chuẩn hóa tên trường giống Excel
+        if (doc.properties && doc.properties.gia_bd !== undefined) {
+          doc.properties.GIA_BD = doc.properties.gia_bd;
+          delete doc.properties.gia_bd;
+        }
+
+        pt.write(JSON.stringify({
+          type: doc.type,
+          geometry: doc.geometry,
+          properties: doc.properties
+        }));
+      }
+      
+      pt.write(']}');
+      pt.end();
+    }
+
+    archive.finalize();
+  } catch (error) {
+    console.error('Lỗi xuất GIS:', error);
     if (!res.headersSent) {
       res.status(500).send('Lỗi máy chủ');
     }

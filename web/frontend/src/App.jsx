@@ -37,11 +37,17 @@ const loadCachedFilterState = () => {
 };
 
 function App() {
-  // Ẩn tính năng tải Excel: Khi truy cập /excel sẽ tự động tải và quay về /
+  // Ẩn tính năng tải Excel và GIS: Khi truy cập sẽ tự động tải và quay về /
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.location.pathname === '/excel') {
-      window.location.href = '/api/export-excel';
-      window.history.replaceState({}, '', '/');
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname;
+      if (path === '/excel') {
+        window.location.href = '/api/export-excel';
+        window.history.replaceState({}, '', '/');
+      } else if (path === '/export-gis') {
+        window.location.href = '/api/export-gis';
+        window.history.replaceState({}, '', '/');
+      }
     }
   }, []);
 
